@@ -21,7 +21,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY app/ app/
-COPY docs/ docs/
+COPY tests/ tests/
+COPY alembic/ alembic/
+COPY alembic.ini .
+COPY run.py .
 
 # Create storage directories
 RUN mkdir -p /app/storage /app/logs
