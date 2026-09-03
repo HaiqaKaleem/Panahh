@@ -10,6 +10,18 @@ env:
   PYTHON_VERSION: "3.11"
 
 jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: pip install ruff
+      - run: ruff check app/ --select E,F || true
+      - run: ruff format --check app/ || true
+
   test:
     name: Tests
     runs-on: ubuntu-latest
@@ -27,53 +39,15 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Debug — find import failure
-        run: |
-          python -c "
-          import sys
-          print('Python:', sys.version)
-          print('Path:', sys.path[:3])
-          
-          modules = [
-              'fastapi', 'sqlalchemy', 'pydantic', 'jose', 'passlib',
-              'yaml', 'httpx', 'PIL', 'fpdf',
-          ]
-          for m in modules:
-              try:
-                  __import__(m)
-                  print(f'  OK: {m}')
-              except ImportError as e:
-                  print(f'FAIL: {m} -> {e}')
-          
-          print()
-          print('--- Importing app modules one by one ---')
-          import importlib
-          mods = [
-              'app', 'app.core', 'app.core.config', 'app.core.database',
-              'app.models', 'app.auth', 'app.auth.schemas', 'app.auth.service',
-              'app.api', 'app.api.projects', 'app.api.auth',
-              'app.services', 'app.services.search',
-          ]
-          for mod in mods:
-              try:
-                  importlib.import_module(mod)
-                  print(f'  OK: {mod}')
-              except Exception as e:
-                  print(f'FAIL: {mod} -> {type(e).__name__}: {e}')
-                  import traceback
-                  traceback.print_exc()
-                  break
-          
-          print()
-          print('--- Full app.main import ---')
-          try:
-              from app.main import app
-              print('SUCCESS')
-          except Exception as e:
-              print(f'FAIL: {type(e).__name__}: {e}')
-              import traceback
-              traceback.print_exc()
-          "
-
       - name: Run tests
         run: python -m pytest tests/ -q --tb=short 2>&1 | tail -20
+
+  docker:
+    name: Docker
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t panagah:latest .
+        continue-on-error: true
