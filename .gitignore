@@ -13,7 +13,7 @@ htmlcov/
 *.vsidx
 *.suo
 *.user
-storage/
-storage_media/
+/storage/
+/storage_media/
 node_modules/
 freebuff/
